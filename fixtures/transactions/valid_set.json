@@ -1,0 +1,15 @@
+{
+  "hash": "0x00000000000000000000000000000000000000000000000000000000validset",
+  "type": 4,
+  "chain_id": 11155111,
+  "authorization_list": [
+    {
+      "chain_id": "0xaa36a7",
+      "address": "0x00000000000000000000000000000000000000aa",
+      "nonce": 0,
+      "y_parity": 1,
+      "r": "0x5aa94e751841ef319a1ae86f5d3f94582dfe78a847584e7ae0a1dc7909d7f3f8",
+      "s": "0x1ac00a83870a8c1277f76e0d84119cb6c7402a5f475efe4ba938144fac042639"
+    }
+  ]
+}

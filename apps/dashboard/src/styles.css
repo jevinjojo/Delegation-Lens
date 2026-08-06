@@ -1,0 +1,37 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; }
+.app { max-width: 1000px; margin: 0 auto; padding: 20px; }
+.app__header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+h1 { font-size: 1.4rem; margin: 0; }
+.nav { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.nav__link { padding: 4px 10px; border-radius: 8px; text-decoration: none; color: inherit; opacity: .7; }
+.nav__link.active { background: #3b82f633; opacity: 1; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
+.card { padding: 14px; border: 1px solid #8883; border-radius: 12px; }
+.card--warn { border-color: #dc2626; }
+.card__value { font-size: 1.6rem; font-weight: 700; }
+.card__label { opacity: .7; font-size: .85rem; }
+.tablewrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-top: 8px; }
+.table th, .table td { text-align: left; padding: 8px; border-bottom: 1px solid #8883; white-space: nowrap; }
+.row--reverted td { opacity: .5; text-decoration: line-through; }
+.pill { padding: 2px 8px; border-radius: 999px; font-size: .72rem; text-transform: uppercase; }
+.pill--ok { background: #16a34a22; color: #16a34a; }
+.pill--bad { background: #dc262622; color: #dc2626; }
+.pill--warn { background: #ca8a0422; color: #ca8a04; }
+.sev--high, .sev--critical { background: #dc262622; color: #dc2626; }
+.sev--medium { background: #ca8a0422; color: #ca8a04; }
+.sev--low, .sev--informational { background: #3b82f622; color: #3b82f6; }
+.conf--heuristic { background: #6b728022; color: #6b7280; }
+.conf--probable { background: #3b82f622; color: #3b82f6; }
+.conf--confirmed { background: #16a34a22; color: #16a34a; }
+.badge { font-size: .72rem; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; }
+.badge--live { background: #16a34a; color: #fff; } .badge--connecting { background: #ca8a04; color: #fff; } .badge--down { background: #dc2626; color: #fff; }
+.state { padding: 14px; opacity: .8; } .state--error { color: #dc2626; }
+.input { padding: 8px; border-radius: 8px; border: 1px solid #8886; min-width: 260px; }
+.btn { padding: 8px 14px; border-radius: 8px; border: 0; background: #3b82f6; color: #fff; cursor: pointer; }
+.finding { border: 1px solid #8883; border-radius: 12px; padding: 12px; margin: 10px 0; }
+.finding p { margin: 6px 0; font-size: .9rem; }
+.disclaimer { font-size: .8rem; opacity: .7; border-left: 3px solid #8886; padding-left: 10px; }
+.timeline { line-height: 1.9; }

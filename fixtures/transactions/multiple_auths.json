@@ -1,0 +1,23 @@
+{
+  "hash": "0x000000000000000000000000000000000000000000000000000multipleauths",
+  "type": 4,
+  "chain_id": 11155111,
+  "authorization_list": [
+    {
+      "chain_id": "0xaa36a7",
+      "address": "0x00000000000000000000000000000000000000aa",
+      "nonce": 0,
+      "y_parity": 1,
+      "r": "0x5aa94e751841ef319a1ae86f5d3f94582dfe78a847584e7ae0a1dc7909d7f3f8",
+      "s": "0x1ac00a83870a8c1277f76e0d84119cb6c7402a5f475efe4ba938144fac042639"
+    },
+    {
+      "chain_id": "0xaa36a7",
+      "address": "0x00000000000000000000000000000000000000aa",
+      "nonce": 1,
+      "y_parity": 1,
+      "r": "0xd8f266d60532acbe34c8e2471d5262216f825e0bf2598d936e8edf664ba7c7f3",
+      "s": "0x605a300708579dba4ebadbaf4db2b6ebcc0adf76284e703601779acd762d85ea"
+    }
+  ]
+}

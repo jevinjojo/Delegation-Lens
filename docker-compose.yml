@@ -1,0 +1,33 @@
+services:
+  delegation-lens:
+    build: .
+    env_file: .env
+    environment:
+      - API_BIND_ADDRESS=0.0.0.0:8080          # bind all interfaces inside the container
+      - DATABASE_URL=sqlite:///data/delegation_lens.db
+    volumes:
+      - dl-data:/data
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on: [delegation-lens]
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on: [prometheus]
+
+volumes:
+  dl-data:

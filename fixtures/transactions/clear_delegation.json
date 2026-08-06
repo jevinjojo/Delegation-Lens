@@ -1,0 +1,15 @@
+{
+  "hash": "0x0000000000000000000000000000000000000000000000000cleardelegation",
+  "type": 4,
+  "chain_id": 11155111,
+  "authorization_list": [
+    {
+      "chain_id": "0xaa36a7",
+      "address": "0x0000000000000000000000000000000000000000",
+      "nonce": 1,
+      "y_parity": 0,
+      "r": "0x163765835d97ef0a76dec290be86e2ad18e2ad73e432a6e452546f4a4245a43d",
+      "s": "0x1233391caea2d4591fc9d967683626dbfc5576b3bc6d04b458648c4991f1eb28"
+    }
+  ]
+}

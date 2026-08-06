@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+.github
+
+# Rust
+target/
+
+# Node
+node_modules/
+**/node_modules/
+
+# Frontend build output
+dist/
+**/dist/
+
+# Foundry
+contracts/cache/
+contracts/out/
+
+# Logs
+*.log
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.local
+.env.*.local
+apps/dashboard/.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

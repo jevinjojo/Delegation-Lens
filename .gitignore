@@ -1,0 +1,34 @@
+# Rust
+target/
+
+# Node
+node_modules/
+**/node_modules/
+
+# Frontend build output
+dist/
+**/dist/
+
+# Foundry
+contracts/cache/
+contracts/out/
+
+# Logs
+*.log
+
+# Local databases (never commit the live DB)
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+apps/dashboard/.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

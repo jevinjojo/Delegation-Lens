@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: DelegationLens API
+  version: 0.1.0
+  description: Reorg-aware EIP-7702 delegation intelligence.
+servers:
+  - url: http://127.0.0.1:8080
+paths:
+  /health: { get: { summary: Liveness, responses: { "200": { description: OK } } } }
+  /ready:  { get: { summary: Readiness, responses: { "200": { description: Ready } } } }
+  /metrics: { get: { summary: Prometheus metrics, responses: { "200": { description: Metrics } } } }
+  /api/v1/stats:
+    get:
+      summary: System-wide statistics
+      responses: { "200": { description: Stats } }
+  /api/v1/delegations:
+    get: { summary: Recent delegations, responses: { "200": { description: List } } }
+    post: { summary: Create a delegation (demo), responses: { "201": { description: Created } } }
+  /api/v1/events:
+    get: { summary: SSE live delegation stream, responses: { "200": { description: text/event-stream } } }
+  /api/v1/accounts/{address}/delegation:
+    get:
+      summary: Current delegation for an account
+      parameters: [ { name: address, in: path, required: true, schema: { type: string } } ]
+      responses: { "200": { description: Delegation }, "400": { description: Invalid address }, "404": { description: Not found } }
+  /api/v1/accounts/{address}/history:
+    get:
+      summary: Delegation history (paginated)
+      parameters:
+        - { name: address, in: path, required: true, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: cursor, in: query, schema: { type: integer } }
+      responses: { "200": { description: Page }, "400": { description: Invalid address } }
+  /api/v1/implementations/{address}:
+    get:
+      summary: Implementation summary
+      parameters: [ { name: address, in: path, required: true, schema: { type: string } } ]
+      responses: { "200": { description: Summary }, "404": { description: Unknown } }
+  /api/v1/implementations/{address}/findings:
+    get:
+      summary: Security findings for an implementation
+      parameters: [ { name: address, in: path, required: true, schema: { type: string } } ]
+      responses: { "200": { description: Findings } }
+  /api/v1/transactions/{hash}:
+    get:
+      summary: Delegation changes in a transaction
+      parameters: [ { name: hash, in: path, required: true, schema: { type: string } } ]
+      responses: { "200": { description: Changes }, "400": { description: Invalid hash }, "404": { description: Not found } }
+  /api/v1/alerts:
+    get: { summary: Active alerts, responses: { "200": { description: List } } }

@@ -1,0 +1,17 @@
+{
+  "decoded": {
+    "hash": "0x0000000000000000000000000000000000000000000000000cleardelegation",
+    "tx_type": 4,
+    "chain_id": 11155111,
+    "authorizations": [
+      {
+        "chain_id": "0xaa36a7",
+        "implementation": "0x0000000000000000000000000000000000000000",
+        "nonce": 1,
+        "is_clear": true,
+        "recovered_authority": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+      }
+    ]
+  },
+  "issues": []
+}

@@ -1,0 +1,29 @@
+# RISK POLICY — these weights are POLICY, not objective fact.
+# Tune them to your risk appetite; changing this file re-evaluates all scores.
+version: 1
+
+# Base points per rule.
+rule_weights:
+  DL-001: 40   # unsafe initialization
+  DL-002: 50   # unprotected arbitrary execution
+  DL-003: 25   # missing replay controls
+
+# Multipliers: "how bad if real".
+severity_multipliers:
+  Informational: 0.0
+  Low: 0.5
+  Medium: 1.0
+  High: 1.5
+  Critical: 2.0
+
+# Multipliers: "how sure we are". Heuristic findings count for less.
+confidence_multipliers:
+  Heuristic: 0.5
+  Probable: 0.85
+  Confirmed: 1.0
+
+# Score thresholds -> risk level.
+thresholds:
+  medium: 40
+  high: 80
+  critical: 120
