@@ -17,6 +17,24 @@ async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+/** Fetches /metrics (Prometheus text) and parses simple `name value` gauges/counters. */
+export async function getMetrics(): Promise<Record<string, number>> {
+  const res = await fetch(`${API}/metrics`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const text = await res.text()
+  const out: Record<string, number> = {}
+  for (const line of text.split('\n')) {
+    if (!line || line.startsWith('#')) continue
+    const sp = line.indexOf(' ')
+    if (sp < 0) continue
+    const key = line.slice(0, sp)
+    if (key.includes('{')) continue // skip histogram quantile series
+    const val = Number(line.slice(sp + 1))
+    if (!Number.isNaN(val)) out[key] = val
+  }
+  return out
+}
+
 export const getStats = () => get<Stats>('/api/v1/stats')
 export const getChanges = (limit = 25) => get<Page<HistoryRow>>(`/api/v1/changes?limit=${limit}`)
 export const getReorgs = (limit = 25) => get<ReorgEvent[]>(`/api/v1/reorgs?limit=${limit}`)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  API, getStats, getChanges, getReorgs, getAccount, getAccountHistory,
+  API, getStats, getChanges,getMetrics, getReorgs, getAccount, getAccountHistory,
   getImplementation, getFindings,
   type Finding, type HistoryRow,
 } from './api'
@@ -70,6 +70,15 @@ function useRoute() {
   const clean = hash.replace(/^#\/?/, '')
   const [view, param] = clean.split('/')
   return { view: view || 'overview', param: param ? decodeURIComponent(param) : undefined }
+}
+
+function useTheme(): [string, () => void] {
+  const [theme, setTheme] = useState<string>(() => localStorage.getItem('dl-theme') || 'light')
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('dl-theme', theme)
+  }, [theme])
+  return [theme, () => setTheme((t) => (t === 'light' ? 'dark' : 'light'))]
 }
 
 // ───────── views ─────────
@@ -223,23 +232,38 @@ function ReorgTimeline() {
 
 function SystemHealth() {
   const stats = useAsync(getStats, [])
+  const metrics = useAsync(getMetrics, [])
   const [conn, setConn] = useState<'connecting' | 'live' | 'down'>('connecting')
   useEffect(() => {
     const es = new EventSource(`${API}/api/v1/events`)
-    es.onopen = () => setConn('live'); es.onerror = () => setConn('down')
+    es.onopen = () => setConn('live')
+    es.onerror = () => setConn('down')
     return () => es.close()
   }, [])
+
   return (
     <>
       <div className="row"><h2>System health</h2><span className={`badge badge--${conn}`}>SSE {conn}</span></div>
+
       <AsyncBlock state={stats}>{(s) => (
         <div className="grid">
           <Stat label="Latest canonical block" value={s.latest_block ?? '—'} />
           <Stat label="Canonical blocks stored" value={s.canonical_blocks} />
+          <Stat label="Active delegations" value={s.active_delegations} />
           <Stat label="Reorgs handled" value={s.reorgs} warn={s.reorgs > 0} />
         </div>
       )}</AsyncBlock>
-      <p className="disclaimer">Deeper metrics (ingestion lag, queue depth, failure counts) arrive with Prometheus in Phase 10.</p>
+
+      <h3>Ingestion</h3>
+      <AsyncBlock state={metrics}>{(m) => (
+        <div className="grid">
+          <Stat label="Ingestion lag (blocks)" value={m.ingestion_lag_blocks ?? 0} warn={(m.ingestion_lag_blocks ?? 0) > 25} />
+          <Stat label="Blocks processed" value={m.blocks_processed_total ?? 0} />
+          <Stat label="Authorizations detected" value={m.authorizations_detected_total ?? 0} />
+          <Stat label="RPC errors" value={m.rpc_errors_total ?? 0} warn={(m.rpc_errors_total ?? 0) > 0} />
+          <Stat label="SSE clients" value={m.sse_clients ?? 0} />
+        </div>
+      )}</AsyncBlock>
     </>
   )
 }
@@ -251,13 +275,20 @@ const NAV = [
 
 export default function App() {
   const { view, param } = useRoute()
+  const [theme, toggleTheme] = useTheme()
   return (
     <div className="app">
       <header className="app__header">
-        <h1>DelegationLens</h1>
+        <div>
+          <h1>DelegationLens</h1>
+          <div className="card__label">Reorg-aware EIP-7702 delegation intelligence</div>
+        </div>
         <nav className="nav">{NAV.map(([h, label]) => (
           <a key={h} href={`#/${h}`} className={`nav__link ${view === (h || 'overview') ? 'active' : ''}`}>{label}</a>
         ))}</nav>
+        <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
       </header>
       <main>
         {view === 'overview' && <Overview />}

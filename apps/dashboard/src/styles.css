@@ -1,4 +1,44 @@
-:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+:root {
+  color-scheme: light;
+  --accent: #4f46e5;
+  --accent-soft: #4f46e51a;
+  --ok: #15803d;      --ok-soft: #15803d1a;
+  --warn: #b45309;    --warn-soft: #b453091a;
+  --bad: #b91c1c;     --bad-soft: #b91c1c1a;
+  --info: #1d4ed8;    --info-soft: #1d4ed81a;
+
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --border: #dbe0e8;
+  --text: #0f172a;
+  --muted: #55606f;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 1px 2px rgba(16,24,40,.05), 0 6px 18px rgba(16,24,40,.07);
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+/* Dark is opt-in via the toggle (softer, still high-contrast) */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --accent: #818cf8;
+  --accent-soft: #818cf828;
+  --ok: #4ade80;   --ok-soft: #4ade8022;
+  --warn: #fbbf24; --warn-soft: #fbbf2422;
+  --bad: #f87171;  --bad-soft: #f8717122;
+  --info: #60a5fa; --info-soft: #60a5fa22;
+
+  --bg: #0f1219;
+  --surface: #171b24;
+  --surface-2: #1f2532;
+  --border: #2b3242;
+  --text: #eaedf3;
+  --muted: #98a2b3;
+  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.4);
+}
 body { margin: 0; }
 .app { max-width: 1000px; margin: 0 auto; padding: 20px; }
 .app__header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -6,6 +46,17 @@ h1 { font-size: 1.4rem; margin: 0; }
 .nav { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
 .nav__link { padding: 4px 10px; border-radius: 8px; text-decoration: none; color: inherit; opacity: .7; }
 .nav__link.active { background: #3b82f633; opacity: 1; }
+.theme-toggle {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  width: 38px; height: 38px;
+  border-radius: 10px; cursor: pointer;
+  font-size: 1rem; line-height: 1;
+  display: grid; place-items: center;
+  transition: background .15s ease, transform .1s ease;
+}
+.theme-toggle:hover { background: var(--surface-2); }
+.theme-toggle:active { transform: scale(.94); }
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
 .card { padding: 14px; border: 1px solid #8883; border-radius: 12px; }
