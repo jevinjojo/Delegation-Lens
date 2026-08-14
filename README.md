@@ -18,28 +18,41 @@ The full pipeline in action — broken into 4 short clips so you can jump straig
 ### 1️⃣ Live Ingestion — Reorg-Safe Canonical Tracking
 The backend connects to **Sepolia**, backfills to head, then follows new blocks over WebSocket. EIP-7702 authorizations are decoded, authorities recovered, and each account's canonical delegation is tracked — with per-change previous-value journaling so a reorg reverts cleanly. Startup logs show **RPC keys redacted**.
 
-<!-- paste GitHub video link here -->  01-Live-Ingestion.mp4
+
+
+https://github.com/user-attachments/assets/27e47f26-3ddd-4cba-b8c2-949daf04f2a9
+
+
 
 ---
 
 ### 2️⃣ Dashboard — Delegations, History & Findings, Live
 A tour of the React dashboard: **Overview** counters, an **SSE live feed** where a real delegation (and a `cleared` event) appears with no refresh, **Account** drill-down with full canonical history, and **Implementation** detail showing security findings with evidence, severity, and a *separate* confidence — never labeling a heuristic as proof.
 
-<!-- paste GitHub video link here -->  02-Dashboard-Tour.mp4
+
+https://github.com/user-attachments/assets/bf4e6bea-e76f-410c-8077-8a9bc93808a2
+
 
 ---
 
 ### 3️⃣ Security Analyzer — Proven with Foundry Exploits
 The three detection rules (DL-001/002/003) are validated against real Solidity fixtures: each **vulnerable** contract has a working exploit (funds drained / ownership seized / signature replayed), and the **safe** counterpart rejects the identical attack. **7/7 Foundry tests pass.**
 
-<!-- paste GitHub video link here -->  03-Security-Analyzer.mp4
+
+
+https://github.com/user-attachments/assets/7ae6a5dc-ad8b-4d82-b358-9b7d4cca2a7e
+
+
+
 
 ---
 
 ### 4️⃣ Observability, Benchmark & CI
 `/metrics` exposes live Prometheus counters and histograms; `docker compose up` brings up Prometheus (target **UP**) + Grafana. The reproducible benchmark reports **~1,400 blocks/s**, **~0.56 ms/block reorg rollback**, and **~309K analyses/s**. GitHub Actions runs green across backend, contracts, and frontend.
 
-<!-- paste GitHub video link here -->  04-Observability-Benchmark-CI.mp4
+
+https://github.com/user-attachments/assets/ecd70fdf-8c40-43b7-b1b1-16f0c23c82f1
+
 
 ---
 
