@@ -12,6 +12,10 @@ use sqlx::SqlitePool;
 use crate::error::AppError;
 use crate::tracker::{self, BlockInput, ChangeInput};
 
+fn now_iso() -> String {
+    chrono::Utc::now().to_rfc3339()
+}
+
 /// A block as fetched from a source, ready to feed the tracker.
 #[derive(Debug, Clone)]
 pub struct FetchedBlock {
@@ -40,6 +44,7 @@ pub trait BlockProvider {
     async fn block_by_number(&self, number: u64) -> Result<Option<FetchedBlock>, AppError>;
     async fn block_by_hash(&self, hash: &str) -> Result<Option<FetchedBlock>, AppError>;
     async fn head_number(&self) -> Result<u64, AppError>;
+    async fn code_at(&self, address: &str) -> Result<Option<String>, AppError>; // NEW
 }
 
 pub async fn process_block<P: BlockProvider>(
@@ -56,6 +61,102 @@ pub async fn process_block<P: BlockProvider>(
         metrics::counter!("authorizations_detected_total").increment(changes.len() as u64);
     }
     result
+}
+
+/// Process a block, then analyze any newly-seen implementation. Analysis errors
+/// are isolated: they never fail block processing.
+pub async fn process_and_analyze<P: BlockProvider>(
+    pool: &SqlitePool,
+    provider: &P,
+    chain_id: u64,
+    block: FetchedBlock,
+) -> Result<Vec<ChangeInput>, AppError> {
+    let changes = process_block(pool, provider, block).await?;
+    for change in &changes {
+        if let Some(impl_addr) = change.new_implementation.clone() {
+            if let Err(error) = analyze_implementation(pool, provider, chain_id, &impl_addr).await {
+                tracing::warn!(%error, impl_addr, "analysis failed (isolated)");
+            }
+        }
+    }
+    Ok(changes)
+}
+
+async fn analyze_implementation<P: BlockProvider>(
+    pool: &SqlitePool,
+    provider: &P,
+    chain_id: u64,
+    impl_addr: &str,
+) -> Result<(), AppError> {
+    use crate::analyzer::{run_analysis, Analyzer, ResolvedImplementation, ANALYZER_VERSION};
+
+    // Idempotent: skip if already analyzed at the current analyzer version.
+    let existing: Option<(String,)> =
+        sqlx::query_as("SELECT analyzer_version FROM implementations WHERE address = ?")
+            .bind(impl_addr)
+            .fetch_optional(pool)
+            .await?;
+    if matches!(&existing, Some((v,)) if v == ANALYZER_VERSION) {
+        return Ok(());
+    }
+
+    let bytecode = provider.code_at(impl_addr).await?; // None => EOA/no code
+    let resolved = bytecode
+        .as_ref()
+        .map(|bc| ResolvedImplementation::new(chain_id, impl_addr.to_owned(), bc.clone(), None));
+    let bytecode_hash = resolved
+        .as_ref()
+        .map(|r| r.bytecode_hash.clone())
+        .unwrap_or_else(|| "0x".into());
+
+    let mut analyzer = Analyzer::new();
+    let outcome = run_analysis(&mut analyzer, Ok(resolved));
+
+    let now = now_iso();
+    sqlx::query(
+        "INSERT INTO implementations (address, bytecode_hash, source_available, analyzer_version, analyzed_at)
+         VALUES (?, ?, 0, ?, ?)
+         ON CONFLICT(address) DO UPDATE SET
+            bytecode_hash = excluded.bytecode_hash,
+            analyzer_version = excluded.analyzer_version,
+            analyzed_at = excluded.analyzed_at",
+    )
+    .bind(impl_addr)
+    .bind(&bytecode_hash)
+    .bind(ANALYZER_VERSION)
+    .bind(&now)
+    .execute(pool)
+    .await?;
+
+    sqlx::query("DELETE FROM findings WHERE implementation = ?")
+        .bind(impl_addr)
+        .execute(pool)
+        .await?;
+    for f in &outcome.findings {
+        sqlx::query(
+            "INSERT INTO findings
+             (id, implementation, rule_id, title, severity, confidence, evidence, explanation,
+              remediation, analyzer_version, rule_version, source_hash, bytecode_hash, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(impl_addr)
+        .bind(&f.rule_id)
+        .bind(&f.title)
+        .bind(format!("{:?}", f.severity)) // "High", "Medium", ...
+        .bind(format!("{:?}", f.confidence)) // "Heuristic", "Probable", ...
+        .bind(&f.evidence)
+        .bind(&f.explanation)
+        .bind(&f.remediation)
+        .bind(&f.analyzer_version)
+        .bind(&f.rule_version)
+        .bind(&f.source_hash)
+        .bind(&f.bytecode_hash)
+        .bind(&now)
+        .execute(pool)
+        .await?;
+    }
+    Ok(())
 }
 
 /// Process one block. Returns the changes that became canonical (for SSE).
@@ -138,13 +239,14 @@ pub async fn next_block_to_process(pool: &SqlitePool) -> Result<Option<u64>, App
 pub async fn backfill<P: BlockProvider>(
     pool: &SqlitePool,
     provider: &P,
+    chain_id: u64,
     from: u64,
     to: u64,
 ) -> Result<(), AppError> {
     for number in from..=to {
         metrics::gauge!("ingestion_lag_blocks").set(to.saturating_sub(number) as f64);
         if let Some(block) = with_retry(|| provider.block_by_number(number)).await? {
-            process_block(pool, provider, block).await?;
+            process_and_analyze(pool, provider, chain_id, block).await?;
         }
     }
     Ok(())
@@ -223,6 +325,9 @@ mod tests {
         async fn head_number(&self) -> Result<u64, AppError> {
             Ok(0)
         }
+        async fn code_at(&self, _address: &str) -> Result<Option<String>, AppError> {
+            Ok(None)
+        }
     }
 
     fn fb(
@@ -241,6 +346,7 @@ mod tests {
                 authority: authority.to_owned(),
                 new_implementation: imp.map(str::to_owned),
                 tx_hash: format!("0xtx_{hash}"),
+                nonce: None,
             }],
         }
     }

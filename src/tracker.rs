@@ -20,8 +20,9 @@ pub struct BlockInput {
 #[derive(Debug, Clone)]
 pub struct ChangeInput {
     pub authority: String,
-    pub new_implementation: Option<String>, // None => clears the delegation
+    pub new_implementation: Option<String>,
     pub tx_hash: String,
+    pub nonce: Option<u64>,
 }
 
 fn now_iso() -> String {
@@ -87,8 +88,8 @@ pub async fn apply_block(pool: &SqlitePool, block: &BlockInput) -> Result<(), Ap
         sqlx::query(
             "INSERT INTO delegation_changes
              (id, block_hash, block_number, authority, previous_implementation,
-              new_implementation, tx_hash, canonical, applied_at, reverted_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, NULL)",
+              new_implementation, tx_hash, nonce, canonical, applied_at, reverted_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL)",
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(&block.hash)
@@ -97,6 +98,7 @@ pub async fn apply_block(pool: &SqlitePool, block: &BlockInput) -> Result<(), Ap
         .bind(&previous_impl)
         .bind(&change.new_implementation)
         .bind(&change.tx_hash)
+        .bind(change.nonce.map(|n| n as i64))
         .bind(&now)
         .execute(&mut *tx)
         .await?;
@@ -250,6 +252,7 @@ mod tests {
                 authority: authority.to_owned(),
                 new_implementation: new_impl.map(str::to_owned),
                 tx_hash: format!("0xtx_{hash}"),
+                nonce: None,
             }],
         }
     }
@@ -428,6 +431,7 @@ mod tests {
                             authority: authorities[auth_idx].into(),
                             new_implementation: new_impl.clone(),
                             tx_hash: format!("0xtx_{hash}"),
+                            nonce: None,
                         }],
                     },
                 )

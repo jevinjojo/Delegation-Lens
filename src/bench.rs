@@ -32,6 +32,7 @@ pub async fn run() -> Result<(), AppError> {
                 authority: format!("0x{:040x}", (n as usize * auths_per_block + i) % 500),
                 new_implementation: Some(format!("0x{:040x}", i + 1)),
                 tx_hash: format!("0xtx{n}_{i}"),
+                nonce: Some(n),
             })
             .collect();
         apply_block(

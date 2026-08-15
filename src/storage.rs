@@ -133,6 +133,7 @@ pub struct HistoryRow {
     pub previous_implementation: Option<String>,
     pub new_implementation: Option<String>,
     pub tx_hash: String,
+    pub nonce: Option<i64>,
     pub canonical: i64,
     pub applied_at: String,
     pub reverted_at: Option<String>,
@@ -145,6 +146,8 @@ pub struct ImplementationSummary {
     pub total_delegations: i64,
     pub first_seen_block: Option<i64>,
     pub last_seen_block: Option<i64>,
+    pub bytecode_hash: Option<String>,
+    pub source_available: bool,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -154,6 +157,30 @@ pub struct Stats {
     pub canonical_blocks: i64,
     pub reorgs: i64,
     pub latest_block: Option<i64>,
+    pub analyzed_implementations: i64,
+    pub high_risk_accounts: i64,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct StoredFinding {
+    pub rule_id: String,
+    pub title: String,
+    pub severity: String,
+    pub confidence: String,
+    pub evidence: String,
+    pub explanation: String,
+    pub remediation: String,
+    pub bytecode_hash: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct AlertRow {
+    pub authority: String,
+    pub implementation: String,
+    pub rule_id: String,
+    pub severity: String,
+    pub block_number: i64,
 }
 
 impl Storage {
@@ -178,7 +205,7 @@ impl Storage {
     ) -> Result<Vec<HistoryRow>, AppError> {
         Ok(sqlx::query_as::<_, HistoryRow>(
             "SELECT rowid, id, block_number, block_hash, authority, previous_implementation,
-                    new_implementation, tx_hash, canonical, applied_at, reverted_at
+                    new_implementation, tx_hash, nonce, canonical, applied_at, reverted_at
              FROM delegation_changes
              WHERE authority = ? AND rowid < ?
              ORDER BY rowid DESC LIMIT ?",
@@ -193,7 +220,7 @@ impl Storage {
     pub async fn transaction_changes(&self, tx_hash: &str) -> Result<Vec<HistoryRow>, AppError> {
         Ok(sqlx::query_as::<_, HistoryRow>(
             "SELECT rowid, id, block_number, block_hash, authority, previous_implementation,
-                    new_implementation, tx_hash, canonical, applied_at, reverted_at
+                    new_implementation, tx_hash, nonce, canonical, applied_at, reverted_at
              FROM delegation_changes WHERE tx_hash = ? ORDER BY rowid",
         )
         .bind(tx_hash)
@@ -210,7 +237,6 @@ impl Storage {
                 .bind(address)
                 .fetch_one(&self.pool)
                 .await?;
-
         let (total_delegations, first_seen_block, last_seen_block): (
             i64,
             Option<i64>,
@@ -226,13 +252,51 @@ impl Storage {
         if delegated_accounts == 0 && total_delegations == 0 {
             return Ok(None);
         }
+
+        let meta: Option<(String, i64)> = sqlx::query_as(
+            "SELECT bytecode_hash, source_available FROM implementations WHERE address = ?",
+        )
+        .bind(address)
+        .fetch_optional(&self.pool)
+        .await?;
+        let (bytecode_hash, source_available) = match meta {
+            Some((h, s)) => (Some(h), s != 0),
+            None => (None, false),
+        };
+
         Ok(Some(ImplementationSummary {
             implementation: address.to_owned(),
             delegated_accounts,
             total_delegations,
             first_seen_block,
             last_seen_block,
+            bytecode_hash,
+            source_available,
         }))
+    }
+
+    pub async fn findings_for(&self, address: &str) -> Result<Vec<StoredFinding>, AppError> {
+        Ok(sqlx::query_as::<_, StoredFinding>(
+            "SELECT rule_id, title, severity, confidence, evidence, explanation, remediation,
+                    bytecode_hash, created_at
+             FROM findings WHERE implementation = ? ORDER BY severity DESC",
+        )
+        .bind(address)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    pub async fn alerts(&self, limit: i64) -> Result<Vec<AlertRow>, AppError> {
+        Ok(sqlx::query_as::<_, AlertRow>(
+            "SELECT cd.authority, cd.implementation, f.rule_id, f.severity, cd.block_number
+             FROM current_delegations cd
+             JOIN findings f ON f.implementation = cd.implementation
+             WHERE cd.implementation IS NOT NULL AND f.severity IN ('High','Critical')
+             ORDER BY cd.block_number DESC LIMIT ?",
+        )
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?)
     }
 
     pub async fn stats(&self) -> Result<Stats, AppError> {
@@ -242,10 +306,13 @@ impl Storage {
                 (SELECT COUNT(*) FROM current_delegations) AS tracked_accounts,
                 (SELECT COUNT(*) FROM blocks WHERE canonical = 1) AS canonical_blocks,
                 (SELECT COUNT(*) FROM reorg_events) AS reorgs,
-                (SELECT MAX(number) FROM blocks WHERE canonical = 1) AS latest_block",
-        )
-        .fetch_one(&self.pool)
-        .await?)
+                (SELECT MAX(number) FROM blocks WHERE canonical = 1) AS latest_block,
+                (SELECT COUNT(*) FROM implementations) AS analyzed_implementations,
+                (SELECT COUNT(DISTINCT cd.authority)
+                   FROM current_delegations cd
+                   JOIN findings f ON f.implementation = cd.implementation
+                   WHERE cd.implementation IS NOT NULL AND f.severity IN ('High','Critical')) AS high_risk_accounts",
+        ).fetch_one(&self.pool).await?)
     }
 }
 
@@ -266,7 +333,7 @@ impl Storage {
     ) -> Result<Vec<HistoryRow>, AppError> {
         Ok(sqlx::query_as::<_, HistoryRow>(
             "SELECT rowid, id, block_number, block_hash, authority, previous_implementation,
-                    new_implementation, tx_hash, canonical, applied_at, reverted_at
+                    new_implementation, tx_hash, nonce, canonical, applied_at, reverted_at
              FROM delegation_changes WHERE rowid < ? ORDER BY rowid DESC LIMIT ?",
         )
         .bind(cursor)

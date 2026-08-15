@@ -23,7 +23,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use crate::{
     domain::{CreateDelegation, Delegation, DelegationCreatedEvent},
     error::AppError,
-    storage::{AccountDelegation, HistoryRow, ImplementationSummary, Stats, Storage},
+    storage::{AccountDelegation, AlertRow, HistoryRow, ImplementationSummary, Stats, Storage},
 };
 
 // Shared application state. Cloned into every request handler.
@@ -173,14 +173,14 @@ async fn implementation(
 }
 
 async fn implementation_findings(
+    State(state): State<AppState>,
     Path(address): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let addr = validate_address(&address)?;
-    Ok(Json(json!({
-        "implementation": addr,
-        "findings": [],
-        "note": "finding persistence is wired in a later phase"
-    })))
+    let findings = state.storage.findings_for(&addr).await?;
+    Ok(Json(
+        json!({ "implementation": addr, "findings": findings }),
+    ))
 }
 
 async fn transaction(
@@ -223,8 +223,8 @@ async fn reorgs(
     ))
 }
 
-async fn alerts() -> Json<serde_json::Value> {
-    Json(json!({ "items": [], "note": "alert persistence is wired in a later phase" }))
+async fn alerts(State(state): State<AppState>) -> Result<Json<Vec<AlertRow>>, AppError> {
+    Ok(Json(state.storage.alerts(100).await?))
 }
 
 async fn stats(State(state): State<AppState>) -> Result<Json<Stats>, AppError> {
@@ -459,6 +459,7 @@ mod tests {
                     authority: auth.into(),
                     new_implementation: Some("0x00000000000000000000000000000000000000bb".into()),
                     tx_hash: "0xtx".into(),
+                    nonce: None,
                 }],
             },
         )

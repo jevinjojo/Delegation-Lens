@@ -446,6 +446,7 @@ mod tests {
                         Some(format!("{:#x}", d.implementation))
                     },
                     tx_hash: "0xtx".into(),
+                    nonce: None,
                 })
             })
             .collect();
@@ -524,6 +525,22 @@ impl<P: Provider + Send + Sync> BlockProvider for RpcSource<P> {
             .await
             .map_err(|e| AppError::Rpc(format!("{e:?}")))
     }
+
+    async fn code_at(&self, address: &str) -> Result<Option<String>, AppError> {
+        let addr: Address = address
+            .parse()
+            .map_err(|e| AppError::Rpc(format!("bad address {address}: {e}")))?;
+        let code = self
+            .provider
+            .get_code_at(addr)
+            .await
+            .map_err(|e| AppError::Rpc(e.to_string()))?;
+        if code.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(format!("0x{}", alloy::hex::encode(&code))))
+        }
+    }
 }
 
 /// Convert an Alloy block into our source-agnostic FetchedBlock.
@@ -565,6 +582,7 @@ fn extract_changes(tx: &Transaction) -> Vec<ChangeInput> {
                 authority: format!("{authority:#x}"),
                 new_implementation,
                 tx_hash: tx_hash.clone(),
+                nonce: Some(signed.inner().nonce),
             })
         })
         .collect()
@@ -616,7 +634,7 @@ pub async fn run_ingestion(
     let head = chain::with_retry(|| http_source.head_number()).await?;
     if resume <= head {
         tracing::info!(resume, head, "backfilling");
-        chain::backfill(&pool, &http_source, resume, head).await?;
+        chain::backfill(&pool, &http_source, chain_id, resume, head).await?;
     }
 
     let Some(ws_url) = ws_url else {
@@ -651,7 +669,7 @@ pub async fn run_ingestion(
                     Ok(Some(block)) => {
                         let block_number = block.number;
                         // Failure isolation: a bad block is logged and skipped, never fatal.
-                        match chain::process_block(&pool, &ws_source, block).await {
+                        match chain::process_and_analyze(&pool, &ws_source, chain_id, block).await {
                             Ok(changes) => {
                                 for change in &changes {
                                     let _ = events.send(to_event(chain_id, block_number, change));

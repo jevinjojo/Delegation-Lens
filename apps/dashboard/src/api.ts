@@ -1,10 +1,10 @@
 export const API = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8080'
 
-export interface Stats { active_delegations: number; tracked_accounts: number; canonical_blocks: number; reorgs: number; latest_block: number | null }
-export interface HistoryRow { id: string; block_number: number; block_hash: string; authority: string; previous_implementation: string | null; new_implementation: string | null; tx_hash: string; canonical: number; applied_at: string; reverted_at: string | null }
+export interface Stats { active_delegations: number; tracked_accounts: number; canonical_blocks: number; reorgs: number; latest_block: number | null; analyzed_implementations: number; high_risk_accounts: number }export interface HistoryRow { id: string; block_number: number; block_hash: string; authority: string; previous_implementation: string | null; new_implementation: string | null; tx_hash: string; canonical: number; applied_at: string; reverted_at: string | null }
 export interface AccountDelegation { authority: string; implementation: string | null; block_number: number; block_hash: string; updated_at: string }
-export interface ImplementationSummary { implementation: string; delegated_accounts: number; total_delegations: number; first_seen_block: number | null; last_seen_block: number | null }
-export interface ReorgEvent { id: string; reverted_block_hash: string; block_number: number; depth: number; detected_at: string }
+export interface HistoryRow { id: string; block_number: number; block_hash: string; authority: string; previous_implementation: string | null; new_implementation: string | null; tx_hash: string; nonce: number | null; canonical: number; applied_at: string; reverted_at: string | null }
+export interface ImplementationSummary { implementation: string; delegated_accounts: number; total_delegations: number; first_seen_block: number | null; last_seen_block: number | null; bytecode_hash: string | null; source_available: boolean }export interface ReorgEvent { id: string; reverted_block_hash: string; block_number: number; depth: number; detected_at: string }
+export interface AlertRow { authority: string; implementation: string; rule_id: string; severity: string; block_number: number }
 export interface Finding { rule_id: string; title: string; severity: string; confidence: string; evidence: string; explanation: string; remediation: string }
 export interface Page<T> { items: T[]; next_cursor: number | null; limit: number }
 
@@ -42,3 +42,4 @@ export const getAccount = (a: string) => get<AccountDelegation>(`/api/v1/account
 export const getAccountHistory = (a: string, limit = 50) => get<Page<HistoryRow>>(`/api/v1/accounts/${a}/history?limit=${limit}`)
 export const getImplementation = (a: string) => get<ImplementationSummary>(`/api/v1/implementations/${a}`)
 export const getFindings = (a: string) => get<{ implementation: string; findings: Finding[]; note?: string }>(`/api/v1/implementations/${a}/findings`)
+export const getAlerts = () => get<AlertRow[]>('/api/v1/alerts')
