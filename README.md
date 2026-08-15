@@ -214,7 +214,7 @@ cargo run --release -- bench                                     # reproducible 
 ```bash
 curl http://127.0.0.1:8080/api/v1/stats
 curl http://127.0.0.1:8080/api/v1/accounts/<address>/delegation
-curl "http://127.0.0.1:8080/api/v1/accounts/<address>/history?limit=10"
+curl http://127.0.0.1:8080/api/v1/accounts/<address>/history?limit=10
 curl http://127.0.0.1:8080/api/v1/accounts/bad/delegation        # -> 400 structured error
 curl http://127.0.0.1:8080/api/v1/alerts
 curl http://127.0.0.1:8080/api/v1/implementations/<address>/findings
