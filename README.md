@@ -20,17 +20,20 @@ The backend connects to **Sepolia**, backfills to head, then follows new blocks 
 
 
 
-https://github.com/user-attachments/assets/27e47f26-3ddd-4cba-b8c2-949daf04f2a9
+
+
+https://github.com/user-attachments/assets/c0f71dbe-fbbe-439d-9493-c9e9ddc4861b
 
 
 
 ---
 
 ### 2️⃣ Dashboard — Delegations, History & Findings, Live
-A tour of the React dashboard: **Overview** counters, an **SSE live feed** where a real delegation (and a `cleared` event) appears with no refresh, **Account** drill-down with full canonical history, and **Implementation** detail showing security findings with evidence, severity, and a *separate* confidence — never labeling a heuristic as proof.
+A tour of the React dashboard: **Overview** counters, an **SSE live feed** where a real delegation (and a `cleared` event) appears with no refresh, **Account** drill-down with full canonical history, and **Implementation** detail showing a real security finding — evidence, severity, and a *separate* confidence — against a live-deployed vulnerable contract, plus the **Alerts** view surfacing at-risk accounts.
 
 
-https://github.com/user-attachments/assets/bf4e6bea-e76f-410c-8077-8a9bc93808a2
+
+https://github.com/user-attachments/assets/647c477c-b934-4584-8476-3aab0d1e25e1
 
 
 ---
@@ -40,7 +43,9 @@ The three detection rules (DL-001/002/003) are validated against real Solidity f
 
 
 
-https://github.com/user-attachments/assets/7ae6a5dc-ad8b-4d82-b358-9b7d4cca2a7e
+
+
+https://github.com/user-attachments/assets/3eba2264-92b6-45e2-87fb-f23b41ae13fc
 
 
 
@@ -51,7 +56,9 @@ https://github.com/user-attachments/assets/7ae6a5dc-ad8b-4d82-b358-9b7d4cca2a7e
 `/metrics` exposes live Prometheus counters and histograms; `docker compose up` brings up Prometheus (target **UP**) + Grafana. The reproducible benchmark reports **~1,400 blocks/s**, **~0.56 ms/block reorg rollback**, and **~309K analyses/s**. GitHub Actions runs green across backend, contracts, and frontend.
 
 
-https://github.com/user-attachments/assets/ecd70fdf-8c40-43b7-b1b1-16f0c23c82f1
+
+
+https://github.com/user-attachments/assets/afc6e6af-acd4-4145-98fc-a331eaba8bae
 
 
 ---
@@ -74,7 +81,8 @@ https://github.com/user-attachments/assets/ecd70fdf-8c40-43b7-b1b1-16f0c23c82f1
 |---|---|
 | ♻️ **Reorg Engine** | Per-change previous-value journaling + atomic SQLite transactions. Walks to the common ancestor, reverts head-first, re-applies. Idempotent apply/revert. |
 | 🔎 **EIP-7702 Decoder** | Decodes the authorization list, recovers each authority (secp256k1 via Alloy `k256`), handles set/clear delegation, flags invalid signatures & chain mismatches. |
-| 🛡️ **Evidence-Based Analyzer** | Rules **DL-001/002/003** with evidence, severity (Informational→Critical), and a *separate* confidence (Heuristic/Probable/Confirmed). Validated against safe + vulnerable fixtures. |
+| 🛡️ **Evidence-Based Analyzer** | Rules **DL-001/002/003** with evidence, severity (Informational→Critical), and a *separate* confidence (Heuristic/Probable/Confirmed). Runs automatically on every new delegation via live bytecode fetch, persisted to SQLite. Validated against safe + vulnerable fixtures. |
+| 🚨 **Live Alerts** | Accounts currently delegated to a High/Critical-severity implementation, computed by joining live findings against canonical delegation state — reverted delegations drop off automatically. |
 | ⚖️ **Policy-as-Code** | `config/risk-policy.yaml` defines rule weights + thresholds. Scores are fully traceable to findings; anomaly signals are kept separate from vulnerabilities. |
 | 📡 **Live Dashboard** | React + Vite + SSE. Overview, live feed, account & implementation detail, reorg timeline, system health — with canonical vs reverted visibly distinct. |
 | 🌐 **Stable REST API** | Axum, cursor pagination, input validation (400 not 500), OpenAPI spec, and rate limiting on expensive endpoints. |
@@ -208,6 +216,10 @@ curl http://127.0.0.1:8080/api/v1/stats
 curl http://127.0.0.1:8080/api/v1/accounts/<address>/delegation
 curl "http://127.0.0.1:8080/api/v1/accounts/<address>/history?limit=10"
 curl http://127.0.0.1:8080/api/v1/accounts/bad/delegation        # -> 400 structured error
+curl http://127.0.0.1:8080/api/v1/alerts
+curl http://127.0.0.1:8080/api/v1/implementations/<address>/findings
+curl http://127.0.0.1:8080/api/v1/changes
+curl http://127.0.0.1:8080/api/v1/reorgs
 curl http://127.0.0.1:8080/api/v1/openapi.yaml
 curl http://127.0.0.1:8080/metrics
 ```
@@ -232,7 +244,7 @@ delegation-lens/
 │   ├── storage.rs         # SQLite (SQLx) read/write queries
 │   ├── api.rs             # Axum REST API + SSE + pagination + rate limiting
 │   └── bench.rs           # reproducible benchmark
-├── migrations/            # blocks, delegation_changes, current_delegations, reorg_events, delegations
+├── migrations/            # blocks, delegation_changes, current_delegations, reorg_events, delegations, implementations, findings
 ├── config/risk-policy.yaml
 ├── fixtures/transactions/ # recorded EIP-7702 transaction fixtures (+ .expected.json)
 ├── contracts/             # Foundry security fixtures
@@ -287,7 +299,6 @@ Full details in [`docs/threat-model.md`](./docs/threat-model.md).
 - [ ] Multi-chain operational indexing
 - [ ] Mainnet historical backfill
 - [ ] Deeper analysis (bytecode decompilation / selective symbolic execution)
-- [ ] Persisted findings & alerts surfaced through the API/dashboard
 - [ ] Grafana dashboards shipped as provisioned JSON
 - [ ] Team accounts / RBAC / multi-tenant
 
